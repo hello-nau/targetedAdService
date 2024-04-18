@@ -1,52 +1,32 @@
-#  Unit 7 Project: ATA Advertising Service
 
-## Preliminaries: The More Things Change
+## Background
 
-### Ambiguity, Complexity, and Scope
-
-Ambiguity will be increasing from previous projects. Tasks instructions will contain fewer details, as we expect you to 
-reference documentation and deep dive into the code yourself to understand how things work. Even if there isn't a 
-specific task for it, you're of course welcome to create any diagrams or other notes as a reference for yourself or 
-others!
-
-There will be some increasing complexity as we work with ExecutorServices for the first time.
-
-You'll have your fellow participants in the same situation as you, so remember to collaborate: rely on each other for 
-assistance, and share your own knowledge.
-
-## Unit 7 Project Progress and Tracking
-
-### Doneness checklist
-
-You're done with the project when: 
-
-* You have successfully passed all tests in CodeGrade
-
-### cloudformation commands
-
-You'll want to run the following commands to setup your DynamoDB tables for this project (note that you will need to wait for the first command's stack to finish building before running the next commands):
-
-```
-aws cloudformation create-stack --region us-west-2 --stack-name advertisingservice-createtables --template-body file://configurations/cloudFormation/ddb_tables.template.yml --capabilities CAPABILITY_IAM
-aws dynamodb batch-write-item --request-items file://configurations/cloudFormation/content_table.json
-aws dynamodb batch-write-item --request-items file://configurations/cloudFormation/targeting_group_table.json
-aws dynamodb batch-write-item --request-items file://configurations/cloudFormation/targeting_group_table2.json
-```
-
-## The Problem: ATA Advertising
-
-ATA's AdvertisingService serves advertisements for ATA. These advertisements show up on the retail website and use 
-targeting to present different ATA advertisements to each individual. The targeting tries to take advantage of what 
+ATA's AdvertisingService serves advertisements for ATA. These advertisements show up on the retail website and use
+targeting to present different ATA advertisements to each individual. The targeting tries to take advantage of what
 Amazon knows about you to show you the particular ad that is most likely to appeal to you.
+## Use Cases
 
-An overview of the service is covered in the [design document](DESIGN_DOCUMENT.md). We encourage you to read that now
-before continuing below.
+* As an ATA business owner, I want to create ATA advertising content that targets specific groups of customers.
+* As an ATA business owner, I want to be able to update existing advertising content .
+* As an ATA business owner, I want to be able to add a new targeting group to an existing piece of advertising content.
+* As an ATA business owner, I want to generate an advertisement for a customer based on the existing advertising content.
+* As an ATA business owner, I want to update an advertisement's click through rate for a targeting group. 
+* ## Advertising Service Implementation Notes
 
-## Project Mastery Tasks
+A piece of content can have multiple targeting groups. For example, we can have a specific advertisement that is
+displayed for customers who have spent at least $15 in the technical books category, but no more than $100 ***OR***
+customers who have spent at least $15 on logic books. Every targeting rule within a targeting group is AND'd together.
+To reach customers that meet one criteria *or *another, we have to use multiple targeting groups.
 
-### [Mastery Task 1: Filter out the noise](tasks/project-mastery-tasks/MasteryTask01.md)
-### [Mastery Task 2: Concurrent Tasks](tasks/project-mastery-tasks/MasteryTask02.md)
-### [Mastery Task 3: Ads don't grow on trees (or do they?)](tasks/project-mastery-tasks/MasteryTask03.md)
+The click through rate tells us the probability that someone who sees this ad will click on it (values are from 0 to 1
+inclusively). We separate click through rate by targeting group, because this advertisement may be incredibly popular
+with customers who have bought technical books (30% chance they will click on the ad), but less popular with the logic
+book group (only a 15% chance they will click on the ad).
 
+To evaluate these targeting rules, we often have to call other services to get data like the PrimeClubService to find
+out a customer's Prime benefits, or the CustomerService to get profile information and spending habits for the customer.
 
-# targetedAdService
+If, for a given customer, there is no eligible advertisement, we will return an empty ad. If any exception occurs when
+calling to generate the ad, we do not want to throw an exception that will bubble up when rendering a detail page, so
+instead we return an empty ad i.e. an empty string.
+
